@@ -89,15 +89,15 @@ namespace AsyncMonolith.TestHelpers
         /// <summary>
         /// Processes the consumer message.
         /// </summary>
-        /// <typeparam name="T">The type of the consumer.</typeparam>
-        /// <typeparam name="V">The type of the payload.</typeparam>
+        /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
+        /// <typeparam name="TPayload">The type of the payload.</typeparam>
         /// <param name="payload">The payload.</param>
         /// <param name="cancellationToken">The cancellation token.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        protected async Task Process<T, V>(V payload, CancellationToken cancellationToken = default) where T : BaseConsumer<V> where V : IConsumerPayload
+        protected async Task Process<TConsumer, TPayload>(TPayload payload, CancellationToken cancellationToken = default) where TConsumer : BaseConsumer<TPayload> where TPayload : IConsumerPayload
         {
             using var scope = Services.CreateScope();
-            await TestConsumerMessageProcessor.Process<T, V>(scope, payload, cancellationToken);
+            await TestConsumerMessageProcessor.Process<TConsumer, TPayload>(scope, payload, cancellationToken);
         }
     }
 }

@@ -7,10 +7,8 @@ namespace AsyncMonolith.Consumers;
 /// </summary>
 public sealed class ConsumerRegistry
 {
-    /// <summary>
-    ///     Gets the async monolith settings.
-    /// </summary>
     private readonly AsyncMonolithSettings _settings;
+    private readonly Dictionary<Type, ConsumerInvoker> _consumerInvokers = new();
 
     /// <summary>
     ///     Gets the dictionary that maps consumer names to their associated time out.
@@ -46,13 +44,20 @@ public sealed class ConsumerRegistry
     public ConsumerRegistry(IReadOnlyDictionary<string, Type> consumerTypeDictionary,
         IReadOnlyDictionary<string, List<string>> payloadConsumerDictionary,
         IReadOnlyDictionary<string, int> consumerTimeoutDictionary,
-        IReadOnlyDictionary<string, int> consumerAttemptsDictionary, AsyncMonolithSettings settings)
+        IReadOnlyDictionary<string, int> consumerAttemptsDictionary,
+        AsyncMonolithSettings settings)
     {
         ConsumerTypeDictionary = consumerTypeDictionary;
         PayloadConsumerDictionary = payloadConsumerDictionary;
         ConsumerTimeoutDictionary = consumerTimeoutDictionary;
         ConsumerAttemptsDictionary = consumerAttemptsDictionary;
         _settings = settings;
+
+        foreach (var consumerType in consumerTypeDictionary.Values)
+        {
+            var invoker = new ConsumerInvoker(this, consumerType);
+            _consumerInvokers.Add(consumerType, invoker);
+        }
     }
 
     /// <summary>
@@ -133,5 +138,15 @@ public sealed class ConsumerRegistry
         }
 
         return _settings.DefaultConsumerTimeout;
+    }
+
+    internal ConsumerInvoker ResolveConsumerInvoker(Type consumerType)
+    {
+        if (!_consumerInvokers.TryGetValue(consumerType, out var invoker))
+        {
+            throw new Exception($"Failed to resolve invoker for consumer type: '{consumerType.Name}'");
+        }
+
+        return invoker;
     }
 }

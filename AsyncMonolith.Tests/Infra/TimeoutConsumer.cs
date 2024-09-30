@@ -12,9 +12,9 @@ public class TimeoutConsumer : BaseConsumer<TimeoutConsumerMessage>
         _consumerInvocations = consumerInvocations;
     }
 
-    public override async Task Consume(TimeoutConsumerMessage message, CancellationToken cancellationToken)
+    public override async Task Consume(ConsumeContext<TimeoutConsumerMessage> context, CancellationToken cancellationToken)
     {
         _consumerInvocations.Increment(nameof(TimeoutConsumer));
-        await Task.Delay(TimeSpan.FromSeconds(message.Delay), cancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(context.Message.Delay), cancellationToken);
     }
 }

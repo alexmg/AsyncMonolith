@@ -63,7 +63,7 @@ public sealed class ConsumerMessageProcessor<T> : BackgroundService where T : Db
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing consumer message batch.");
+                _logger.LogError(ex, "Error processing consumer message batch");
             }
 
             if (delay >= 10)
@@ -202,7 +202,8 @@ public sealed class ConsumerMessageProcessor<T> : BackgroundService where T : Db
             }
 
             // Execute the consumer
-            await consumer.Consume(message, timeoutCancellationToken.Token);
+            var consumerInvoker = _consumerRegistry.ResolveConsumerInvoker(consumerType);
+            await consumerInvoker.InvokeConsumer(consumer, message, timeoutCancellationToken.Token);
 
             activity?.SetStatus(ActivityStatusCode.Ok);
             _logger.LogInformation("Successfully processed message for consumer: '{id}'", message.ConsumerType);

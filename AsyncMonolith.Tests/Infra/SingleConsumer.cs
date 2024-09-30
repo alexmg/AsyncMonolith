@@ -13,7 +13,7 @@ public class SingleConsumer : BaseConsumer<SingleConsumerMessage>
         _consumerInvocations = consumerInvocations;
     }
 
-    public override Task Consume(SingleConsumerMessage message, CancellationToken cancellationToken)
+    public override Task Consume(ConsumeContext<SingleConsumerMessage> context, CancellationToken cancellationToken)
     {
         _consumerInvocations.Increment(nameof(SingleConsumer));
         return Task.CompletedTask;

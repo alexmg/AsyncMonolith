@@ -11,7 +11,7 @@ public class MultiConsumer2 : BaseConsumer<MultiConsumerMessage>
         _consumerInvocations = consumerInvocations;
     }
 
-    public override Task Consume(MultiConsumerMessage message, CancellationToken cancellationToken)
+    public override Task Consume(ConsumeContext<MultiConsumerMessage> message, CancellationToken cancellationToken)
     {
         _consumerInvocations.Increment(nameof(MultiConsumer2));
 

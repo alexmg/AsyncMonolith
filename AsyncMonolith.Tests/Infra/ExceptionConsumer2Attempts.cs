@@ -12,7 +12,7 @@ public class ExceptionConsumer2Attempts : BaseConsumer<ExceptionConsumer2Attempt
         _consumerInvocations = consumerInvocations;
     }
 
-    public override Task Consume(ExceptionConsumer2AttemptsMessage message, CancellationToken cancellationToken)
+    public override Task Consume(ConsumeContext<ExceptionConsumer2AttemptsMessage> context, CancellationToken cancellationToken)
     {
         _consumerInvocations.Increment(nameof(ExceptionConsumer2AttemptsMessage));
         throw new Exception();

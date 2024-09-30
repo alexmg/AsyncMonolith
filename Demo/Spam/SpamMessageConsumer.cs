@@ -11,9 +11,9 @@ public class SpamMessageConsumer : BaseConsumer<SpamMessage>
         _timeProvider = timeProvider;
     }
 
-    public override Task Consume(SpamMessage message, CancellationToken cancellationToken)
+    public override Task Consume(ConsumeContext<SpamMessage> context, CancellationToken cancellationToken)
     {
-        if (message.Last)
+        if (context.Message.Last)
         {
             SpamResultService.End = _timeProvider.GetUtcNow().ToUnixTimeMilliseconds();
         }

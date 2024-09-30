@@ -45,7 +45,8 @@ public static class TestConsumerMessageProcessor
         }
 
         // Execute the consumer
-        await consumer.Consume(message, cancellationToken);
+        var consumerInvoker = consumerRegistry.ResolveConsumerInvoker(consumerType);
+        await consumerInvoker.InvokeConsumer(consumer, message, cancellationToken);
 
         consumerMessageSet.Remove(message);
 
@@ -58,17 +59,20 @@ public static class TestConsumerMessageProcessor
     /// <summary>
     /// Processes the next consumer message of type T and V.
     /// </summary>
-    /// <typeparam name="T">The type of DbContext.</typeparam>
-    /// <typeparam name="V">The type of IConsumer.</typeparam>
+    /// <typeparam name="TDbContext">The type of DbContext.</typeparam>
+    /// <typeparam name="TConsumer">The type of IConsumer.</typeparam>
     /// <param name="scope">The service scope.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The processed consumer message, or null if no message is available.</returns>
-    public static async Task<ConsumerMessage?> ProcessNext<T, V>(IServiceScope scope,
-        CancellationToken cancellationToken = default) where T : DbContext where V : IConsumer
+    public static async Task<ConsumerMessage?> ProcessNext<TDbContext, TConsumer>(
+        IServiceScope scope,
+        CancellationToken cancellationToken = default)
+        where TDbContext : DbContext
+        where TConsumer : IConsumer
     {
-        var dbContext = scope.ServiceProvider.GetRequiredService<T>();
+        var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
         var consumerMessageSet = dbContext.Set<ConsumerMessage>();
-        var consumerType = typeof(T);
+        var consumerType = typeof(TDbContext);
         var message = await consumerMessageSet
             .Where(m => m.ConsumerType == consumerType.Name)
             .OrderBy(m => m.AvailableAfter)
@@ -89,7 +93,9 @@ public static class TestConsumerMessageProcessor
         }
 
         // Execute the consumer
-        await consumer.Consume(message, cancellationToken);
+        var consumerRegistry = scope.ServiceProvider.GetRequiredService<ConsumerRegistry>();
+        var consumerInvoker = consumerRegistry.ResolveConsumerInvoker(consumerType);
+        await consumerInvoker.InvokeConsumer(consumer, message, cancellationToken);
 
         consumerMessageSet.Remove(message);
 
@@ -100,17 +106,21 @@ public static class TestConsumerMessageProcessor
     }
 
     /// <summary>
-    /// Processes the consumer message of type T and V with the given payload.
+    /// Processes the consumer message of type TPayload with the consumer of type TConsumer.
     /// </summary>
-    /// <typeparam name="T">The type of BaseConsumer.</typeparam>
-    /// <typeparam name="V">The type of IConsumerPayload.</typeparam>
+    /// <typeparam name="TConsumer">The type of the consumer.</typeparam>
+    /// <typeparam name="TPayload">The type of the payload.</typeparam>
     /// <param name="scope">The service scope.</param>
     /// <param name="payload">The payload for the consumer message.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public static async Task Process<T, V>(IServiceScope scope, V payload,
-        CancellationToken cancellationToken = default) where T : BaseConsumer<V> where V : IConsumerPayload
+    public static async Task Process<TConsumer, TPayload>(
+        IServiceScope scope,
+        TPayload payload,
+        CancellationToken cancellationToken = default)
+        where TConsumer : BaseConsumer<TPayload>
+        where TPayload : IConsumerPayload
     {
-        var consumerType = typeof(T);
+        var consumerType = typeof(TConsumer);
 
         // Resolve the consumer
         if (scope.ServiceProvider.GetRequiredService(consumerType)
@@ -121,18 +131,23 @@ public static class TestConsumerMessageProcessor
         }
 
         // Execute the consumer
-        await consumer.Consume(new ConsumerMessage
-        {
-            Attempts = 0,
-            AvailableAfter = 0,
-            ConsumerType = consumerType.Name,
-            CreatedAt = 0,
-            Id = string.Empty,
-            InsertId = string.Empty,
-            Payload = JsonSerializer.Serialize(payload),
-            PayloadType = typeof(V).Name,
-            TraceId = null,
-            SpanId = null
-        }, cancellationToken);
+        var consumerRegistry = scope.ServiceProvider.GetRequiredService<ConsumerRegistry>();
+        var consumerInvoker = consumerRegistry.ResolveConsumerInvoker(consumerType);
+        await consumerInvoker.InvokeConsumer(
+            consumer,
+            new ConsumerMessage
+            {
+                Attempts = 0,
+                AvailableAfter = 0,
+                ConsumerType = consumerType.Name,
+                CreatedAt = 0,
+                Id = string.Empty,
+                InsertId = string.Empty,
+                Payload = JsonSerializer.Serialize(payload),
+                PayloadType = typeof(TPayload).Name,
+                TraceId = null,
+                SpanId = null
+            },
+            cancellationToken);
     }
 }
