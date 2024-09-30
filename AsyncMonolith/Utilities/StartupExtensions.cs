@@ -131,18 +131,10 @@ public static class StartupExtensions
         var consumerTimeoutDictionary = new Dictionary<string, int>();
         var consumerAttemptsDictionary = new Dictionary<string, int>();
 
-        var type = typeof(BaseConsumer<>);
         var typesToScan = settings.AssembliesToRegister.SelectMany(x => x.GetTypes()).ToArray();
 
-        foreach (var consumerType in typesToScan
-            .Where(t => t is { IsAbstract: false, BaseType.IsGenericType: true } &&
-                        t.BaseType.GetGenericTypeDefinition() == type))
+        foreach (var consumerType in typesToScan.Where(t => t.IsConsumerType()))
         {
-            if (consumerType.BaseType == null || string.IsNullOrEmpty(consumerType.Name))
-            {
-                continue;
-            }
-
             // Register each consumer service
             services.AddScoped(consumerType);
 
@@ -175,7 +167,7 @@ public static class StartupExtensions
             consumerAttemptsDictionary[consumerType.Name] = maxAttempts;
 
             // Get the generic argument (T) of the consumer type
-            var payloadType = consumerType.BaseType.GetGenericArguments()[0];
+            var payloadType = consumerType.GetPayloadType();
 
             if (!consumerServiceDictionary.TryAdd(consumerType.Name, consumerType))
             {
@@ -190,9 +182,7 @@ public static class StartupExtensions
             payloadConsumers.Add(consumerType.Name);
         }
 
-        foreach (var consumerPayload in typesToScan
-            .Where(t => t is { IsClass: true, IsAbstract: false } && t.IsAssignableTo(typeof(IConsumerPayload)))
-            .Select(t => t.Name))
+        foreach (var consumerPayload in typesToScan.Where(t => t.IsPayloadType()).Select(t => t.Name))
         {
             if (!payloadConsumerDictionary.ContainsKey(consumerPayload))
             {

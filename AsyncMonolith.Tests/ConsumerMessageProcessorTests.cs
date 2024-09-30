@@ -49,6 +49,43 @@ public class ConsumerMessageProcessorTests : DbTestsBase
 
     [Theory]
     [MemberData(nameof(GetTestDbContainers))]
+    public async Task ConsumerMessageProcessor_Supports_Interface(TestDbContainerBase dbContainer)
+    {
+        try
+        {
+            // Given
+            var serviceProvider = await Setup(dbContainer);
+
+            using (var scope = serviceProvider.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+                var producer = scope.ServiceProvider.GetRequiredService<IProducerService>();
+
+                await producer.Produce(new InterfaceConsumerMessage
+                {
+                    Name = "test-name"
+                });
+
+                await dbContext.SaveChangesAsync();
+            }
+
+            // When
+            var processor = serviceProvider.GetRequiredService<ConsumerMessageProcessor<TestDbContext>>();
+
+            var consumedMessage = await processor.ProcessBatch(CancellationToken.None);
+
+            // Then
+            consumedMessage.Should().Be(1);
+            TestConsumerInvocations.GetInvocationCount(nameof(InterfaceConsumer)).Should().Be(1);
+        }
+        finally
+        {
+            await dbContainer.DisposeAsync();
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(GetTestDbContainers))]
     public async Task ConsumerMessageProcessor_Returns_0_If_No_Available_Messages(TestDbContainerBase dbContainer)
     {
         try

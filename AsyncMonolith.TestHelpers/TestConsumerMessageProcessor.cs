@@ -34,11 +34,10 @@ public static class TestConsumerMessageProcessor
             return null;
         }
 
-        var consumerType = consumerRegistry.ResolveConsumerType(message);
-
         // Resolve the consumer
-        if (scope.ServiceProvider.GetRequiredService(consumerType)
-            is not IConsumer consumer)
+        var consumerType = consumerRegistry.ResolveConsumerType(message);
+        var consumer = scope.ServiceProvider.GetService(consumerType);
+        if (consumer is null)
         {
             Assert.Fail($"Couldn't resolve consumer service of type: '{message.ConsumerType}'");
             return null;
@@ -68,7 +67,7 @@ public static class TestConsumerMessageProcessor
         IServiceScope scope,
         CancellationToken cancellationToken = default)
         where TDbContext : DbContext
-        where TConsumer : IConsumer
+        where TConsumer : IConsumer<IConsumerPayload>
     {
         var dbContext = scope.ServiceProvider.GetRequiredService<TDbContext>();
         var consumerMessageSet = dbContext.Set<ConsumerMessage>();
@@ -85,8 +84,8 @@ public static class TestConsumerMessageProcessor
         }
 
         // Resolve the consumer
-        if (scope.ServiceProvider.GetRequiredService(consumerType)
-            is not IConsumer consumer)
+        var consumer = scope.ServiceProvider.GetService(consumerType);
+        if (consumer is null)
         {
             Assert.Fail($"Couldn't resolve consumer service of type: '{message.ConsumerType}'");
             return null;
@@ -120,11 +119,10 @@ public static class TestConsumerMessageProcessor
         where TConsumer : BaseConsumer<TPayload>
         where TPayload : IConsumerPayload
     {
-        var consumerType = typeof(TConsumer);
-
         // Resolve the consumer
-        if (scope.ServiceProvider.GetRequiredService(consumerType)
-            is not IConsumer consumer)
+        var consumerType = typeof(TConsumer);
+        var consumer = scope.ServiceProvider.GetService(consumerType);
+        if (consumer is null)
         {
             Assert.Fail($"Couldn't resolve consumer service of type: '{consumerType.Name}'");
             return;

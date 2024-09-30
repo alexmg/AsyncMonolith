@@ -195,8 +195,8 @@ public sealed class ConsumerMessageProcessor<T> : BackgroundService where T : Db
             using var scope = _scopeFactory.CreateScope();
 
             // Resolve the consumer
-            if (scope.ServiceProvider.GetRequiredService(consumerType)
-                is not IConsumer consumer)
+            var consumer = scope.ServiceProvider.GetService(consumerType);
+            if (consumer is null)
             {
                 throw new Exception($"Couldn't resolve consumer service of type: '{message.ConsumerType}'");
             }
