@@ -14,7 +14,7 @@ public class TotalValueConsumer : BaseConsumer<ValuePersisted>
         _dbContext = dbContext;
     }
 
-    public override async Task Consume(ConsumeContext<ValuePersisted> context, CancellationToken cancellationToken)
+    public override async Task Consume(ValuePersisted message, CancellationToken cancellationToken)
     {
         var totalValue = await _dbContext.SubmittedValues.SumAsync(v => v.Value, cancellationToken);
         _totalValueService.Set(totalValue);

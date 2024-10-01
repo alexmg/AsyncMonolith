@@ -49,7 +49,7 @@ public class ConsumerMessageProcessorTests : DbTestsBase
 
     [Theory]
     [MemberData(nameof(GetTestDbContainers))]
-    public async Task ConsumerMessageProcessor_Supports_Interface(TestDbContainerBase dbContainer)
+    public async Task ConsumerMessageProcessor_Supports_Interface_Only_Consumer(TestDbContainerBase dbContainer)
     {
         try
         {

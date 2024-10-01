@@ -15,11 +15,11 @@ public class ValueSubmittedConsumer : BaseConsumer<ValueSubmitted>
         _producerService = producerService;
     }
 
-    public override async Task Consume(ConsumeContext<ValueSubmitted> context, CancellationToken cancellationToken = default)
+    public override async Task Consume(ValueSubmitted message, CancellationToken cancellationToken = default)
     {
         var newValue = new SubmittedValue
         {
-            Value = context.Message.Value
+            Value = message.Value
         };
 
         _dbContext.SubmittedValues.Add(newValue);
