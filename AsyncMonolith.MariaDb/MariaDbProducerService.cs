@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using AsyncMonolith.Consumers;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Microsoft.EntityFrameworkCore;
 using MySqlConnector;
@@ -19,6 +19,7 @@ public sealed class MariaDbProducerService<T> : IProducerService where T : DbCon
     private readonly ConsumerRegistry _consumerRegistry;
     private readonly T _dbContext;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -28,13 +29,19 @@ public sealed class MariaDbProducerService<T> : IProducerService where T : DbCon
     /// <param name="consumerRegistry">The consumer registry.</param>
     /// <param name="dbContext">The DbContext.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public MariaDbProducerService(TimeProvider timeProvider, ConsumerRegistry consumerRegistry, T dbContext,
-        IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public MariaDbProducerService(
+        TimeProvider timeProvider,
+        ConsumerRegistry consumerRegistry,
+        T dbContext,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _consumerRegistry = consumerRegistry;
         _dbContext = dbContext;
         _idGenerator = idGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -52,7 +59,7 @@ public sealed class MariaDbProducerService<T> : IProducerService where T : DbCon
     {
         var currentTime = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         availableAfter ??= currentTime;
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         var payloadType = typeof(TK).Name;
         insertId ??= _idGenerator.GenerateId();
         var traceId = Activity.Current?.TraceId.ToString();
@@ -125,7 +132,7 @@ public sealed class MariaDbProducerService<T> : IProducerService where T : DbCon
         {
             var message = messages[i];
             var insertId = _idGenerator.GenerateId();
-            var payload = JsonSerializer.Serialize(message);
+            var payload = _payloadSerializer.Serialize(message);
             parameters.Add(new MySqlParameter($"@insert_id_{i}", insertId));
             parameters.Add(new MySqlParameter($"@payload_type_{i}", payloadType));
             parameters.Add(new MySqlParameter($"@payload_{i}", payload));

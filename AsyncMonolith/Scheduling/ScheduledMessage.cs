@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
 using System.Text.Json.Serialization;
 using AsyncMonolith.Consumers;
+using AsyncMonolith.Serialization;
 using Cronos;
 
 namespace AsyncMonolith.Scheduling;
@@ -110,9 +110,10 @@ public class ScheduledMessage
     /// </summary>
     /// <typeparam name="TK">The type of the payload.</typeparam>
     /// <param name="message">The payload message.</param>
-    public void UpdatePayload<TK>(TK message) where TK : IConsumerPayload
+    /// <param name="serializer">The payload serializer.</param>
+    public void UpdatePayload<TK>(TK message, IPayloadSerializer serializer) where TK : IConsumerPayload
     {
-        var payload = JsonSerializer.Serialize(message);
+        var payload = serializer.Serialize(message);
         Payload = payload;
         PayloadType = typeof(TK).Name;
     }

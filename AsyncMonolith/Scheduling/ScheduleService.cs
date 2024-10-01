@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using AsyncMonolith.Consumers;
+﻿using AsyncMonolith.Consumers;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Cronos;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +14,7 @@ public sealed class ScheduleService<T> : IScheduleService where T : DbContext
 {
     private readonly T _dbContext;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -22,11 +23,17 @@ public sealed class ScheduleService<T> : IScheduleService where T : DbContext
     /// <param name="timeProvider">The time provider.</param>
     /// <param name="dbContext">The DbContext.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public ScheduleService(TimeProvider timeProvider, T dbContext, IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public ScheduleService(
+        TimeProvider timeProvider,
+        T dbContext,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _dbContext = dbContext;
         _idGenerator = idGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -41,7 +48,7 @@ public sealed class ScheduleService<T> : IScheduleService where T : DbContext
     public string Schedule<TK>(TK message, string chronExpression, string chronTimezone, string? tag = null)
         where TK : IConsumerPayload
     {
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         var id = _idGenerator.GenerateId();
 
         var expression = CronExpression.Parse(chronExpression, CronFormat.IncludeSeconds);

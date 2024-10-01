@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using AsyncMonolith.Consumers;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,7 @@ public sealed class MsSqlProducerService<T> : IProducerService where T : DbConte
     private readonly ConsumerRegistry _consumerRegistry;
     private readonly T _dbContext;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -28,13 +29,19 @@ public sealed class MsSqlProducerService<T> : IProducerService where T : DbConte
     /// <param name="consumerRegistry">The consumer registry.</param>
     /// <param name="dbContext">The DbContext.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public MsSqlProducerService(TimeProvider timeProvider, ConsumerRegistry consumerRegistry, T dbContext,
-        IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public MsSqlProducerService(
+        TimeProvider timeProvider,
+        ConsumerRegistry consumerRegistry,
+        T dbContext,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _consumerRegistry = consumerRegistry;
         _dbContext = dbContext;
         _idGenerator = idGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -52,7 +59,7 @@ public sealed class MsSqlProducerService<T> : IProducerService where T : DbConte
     {
         var currentTime = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         availableAfter ??= currentTime;
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         var payloadType = typeof(TK).Name;
         insertId ??= _idGenerator.GenerateId();
         var traceId = Activity.Current?.TraceId.ToString();
@@ -128,7 +135,7 @@ public sealed class MsSqlProducerService<T> : IProducerService where T : DbConte
         {
             var message = messages[i];
             var insertId = _idGenerator.GenerateId();
-            var payload = JsonSerializer.Serialize(message);
+            var payload = _payloadSerializer.Serialize(message);
             parameters.Add(new SqlParameter($"@insert_id_{i}", insertId));
             parameters.Add(new SqlParameter($"@payload_type_{i}", payloadType));
             parameters.Add(new SqlParameter($"@payload_{i}", payload));

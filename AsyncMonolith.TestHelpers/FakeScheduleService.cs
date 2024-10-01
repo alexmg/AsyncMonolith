@@ -1,6 +1,6 @@
-﻿using System.Text.Json;
-using AsyncMonolith.Consumers;
+﻿using AsyncMonolith.Consumers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Cronos;
 
@@ -12,6 +12,7 @@ namespace AsyncMonolith.TestHelpers;
 public sealed class FakeScheduleService : IScheduleService
 {
     private readonly IAsyncMonolithIdGenerator _fakeIdGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -19,10 +20,15 @@ public sealed class FakeScheduleService : IScheduleService
     /// </summary>
     /// <param name="timeProvider">The time provider.</param>
     /// <param name="fakeIdGenerator">The fake ID generator.</param>
-    public FakeScheduleService(TimeProvider timeProvider, IAsyncMonolithIdGenerator fakeIdGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public FakeScheduleService(
+        TimeProvider timeProvider,
+        IAsyncMonolithIdGenerator fakeIdGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _fakeIdGenerator = fakeIdGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -53,7 +59,7 @@ public sealed class FakeScheduleService : IScheduleService
     public string Schedule<TK>(TK message, string chronExpression, string chronTimezone, string? tag = null)
         where TK : IConsumerPayload
     {
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         var id = _fakeIdGenerator.GenerateId();
 
         var expression = CronExpression.Parse(chronExpression, CronFormat.IncludeSeconds);

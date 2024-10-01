@@ -7,6 +7,7 @@ using AsyncMonolith.MySql;
 using AsyncMonolith.PostgreSql;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.TestHelpers;
 using AsyncMonolith.Utilities;
 using Microsoft.EntityFrameworkCore;
@@ -35,6 +36,7 @@ public static class TestServiceHelpers
         settings.RegisterTypesFromAssembly(Assembly.GetExecutingAssembly());
         services.InternalRegisterAsyncMonolithConsumers(settings);
         services.AddSingleton<IAsyncMonolithIdGenerator>(new FakeIdGenerator());
+        services.AddSingleton<IPayloadSerializer, DefaultPayloadSerializer>();
         services.AddScoped<IScheduleService, ScheduleService<TestDbContext>>();
         switch (dbType)
         {

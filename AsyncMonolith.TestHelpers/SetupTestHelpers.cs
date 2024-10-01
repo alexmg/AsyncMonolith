@@ -1,6 +1,7 @@
 ﻿using System.Reflection;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace AsyncMonolith.TestHelpers;
 
 /// <summary>
-/// 
+///
 /// </summary>
 public static class SetupTestHelpers
 {
@@ -75,6 +76,7 @@ public static class SetupTestHelpers
         services.InternalConfigureAsyncMonolithSettings(settings);
         services.InternalRegisterAsyncMonolithConsumers(settings);
         services.AddSingleton<IAsyncMonolithIdGenerator>(new FakeIdGenerator());
+        services.AddSingleton<IPayloadSerializer, DefaultPayloadSerializer>();
         services.AddScoped<IScheduleService, FakeScheduleService>();
         services.AddScoped<IProducerService, FakeProducerService>();
         return services;
@@ -88,6 +90,7 @@ public static class SetupTestHelpers
         configuration(settings);
         services.InternalConfigureAsyncMonolithSettings(settings);
         services.InternalRegisterAsyncMonolithConsumers(settings);
+        services.AddSingleton<IPayloadSerializer, DefaultPayloadSerializer>();
         services.AddSingleton<IAsyncMonolithIdGenerator>(new AsyncMonolithIdGenerator());
         services.AddScoped<IScheduleService, ScheduleService<T>>();
         return services;

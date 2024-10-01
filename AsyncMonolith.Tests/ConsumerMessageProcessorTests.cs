@@ -156,6 +156,7 @@ public class ConsumerMessageProcessorTests : DbTestsBase
                 var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
                 var message =
                     await dbContext.AssertSingleConsumerMessage<ExceptionConsumer, ExceptionConsumerMessage>(
+                        serviceProvider,
                         consumerMessage);
                 message?.Attempts.Should().Be(1);
             }
@@ -200,6 +201,7 @@ public class ConsumerMessageProcessorTests : DbTestsBase
                 var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
                 var message =
                     await dbContext.AssertSingleConsumerMessage<TimeoutConsumer, TimeoutConsumerMessage>(
+                        serviceProvider,
                         consumerMessage);
                 message?.Attempts.Should().Be(1);
             }
@@ -244,6 +246,7 @@ public class ConsumerMessageProcessorTests : DbTestsBase
                 var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
                 var message =
                     await dbContext.AssertSingleConsumerMessage<ExceptionConsumer, ExceptionConsumerMessage>(
+                        serviceProvider,
                         consumerMessage);
                 message?.AvailableAfter.Should().Be(FakeTime.GetUtcNow().ToUnixTimeSeconds() + 10);
             }

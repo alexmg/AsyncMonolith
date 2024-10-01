@@ -1,4 +1,5 @@
-﻿using AsyncMonolith.Utilities;
+﻿using AsyncMonolith.Serialization;
+using AsyncMonolith.Utilities;
 
 namespace AsyncMonolith.Consumers;
 
@@ -39,13 +40,15 @@ public sealed class ConsumerRegistry
     ///     handle them.
     /// </param>
     /// <param name="consumerTimeoutDictionary">The dictionary that maps consumer names to their associated time out.</param>
-    ///     /// <param name="consumerAttemptsDictionary">The dictionary that maps consumer names to their associated number of attempts.</param>
+    /// <param name="consumerAttemptsDictionary">The dictionary that maps consumer names to their associated number of attempts.</param>
     /// <param name="settings">Async Monolith settings.</param>
+    /// <param name="serializer">The payload serializer.</param>
     public ConsumerRegistry(IReadOnlyDictionary<string, Type> consumerTypeDictionary,
         IReadOnlyDictionary<string, List<string>> payloadConsumerDictionary,
         IReadOnlyDictionary<string, int> consumerTimeoutDictionary,
         IReadOnlyDictionary<string, int> consumerAttemptsDictionary,
-        AsyncMonolithSettings settings)
+        AsyncMonolithSettings settings,
+        IPayloadSerializer serializer)
     {
         ConsumerTypeDictionary = consumerTypeDictionary;
         PayloadConsumerDictionary = payloadConsumerDictionary;
@@ -55,7 +58,7 @@ public sealed class ConsumerRegistry
 
         foreach (var consumerType in consumerTypeDictionary.Values)
         {
-            var invoker = new ConsumerInvoker(this, consumerType);
+            var invoker = new ConsumerInvoker(this, consumerType, serializer);
             _consumerInvokers.Add(consumerType, invoker);
         }
     }

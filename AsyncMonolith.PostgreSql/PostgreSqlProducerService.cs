@@ -1,9 +1,9 @@
 ﻿using System.Diagnostics;
 using System.Text;
-using System.Text.Json;
 using AsyncMonolith.Consumers;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -19,6 +19,7 @@ public sealed class PostgreSqlProducerService<T> : IProducerService where T : Db
     private readonly ConsumerRegistry _consumerRegistry;
     private readonly T _dbContext;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -28,13 +29,19 @@ public sealed class PostgreSqlProducerService<T> : IProducerService where T : Db
     /// <param name="consumerRegistry">The consumer registry.</param>
     /// <param name="dbContext">The DbContext.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public PostgreSqlProducerService(TimeProvider timeProvider, ConsumerRegistry consumerRegistry, T dbContext,
-        IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public PostgreSqlProducerService(
+        TimeProvider timeProvider,
+        ConsumerRegistry consumerRegistry,
+        T dbContext,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _consumerRegistry = consumerRegistry;
         _dbContext = dbContext;
         _idGenerator = idGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -52,7 +59,7 @@ public sealed class PostgreSqlProducerService<T> : IProducerService where T : Db
     {
         var currentTime = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         availableAfter ??= currentTime;
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         var traceId = Activity.Current?.TraceId.ToString();
         var spanId = Activity.Current?.SpanId.ToString();
 
@@ -126,7 +133,7 @@ public sealed class PostgreSqlProducerService<T> : IProducerService where T : Db
         {
             var message = messages[i];
             var insertId = _idGenerator.GenerateId();
-            var payload = JsonSerializer.Serialize(message);
+            var payload = _payloadSerializer.Serialize(message);
             parameters.Add(new NpgsqlParameter($"@insert_id_{i}", insertId));
             parameters.Add(new NpgsqlParameter($"@payload_type_{i}", payloadType));
             parameters.Add(new NpgsqlParameter($"@payload_{i}", payload));

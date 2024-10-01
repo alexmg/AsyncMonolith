@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using System.Text.Json;
 using AsyncMonolith.Producers;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.TestHelpers;
 using AsyncMonolith.Tests.Infra;
 using FluentAssertions;
@@ -41,8 +41,10 @@ public class ProducerServiceDbTests : DbTestsBase
             using var scope = serviceProvider.CreateScope();
             {
                 var postDbContext = serviceProvider.GetRequiredService<TestDbContext>();
+                var serializer = serviceProvider.GetRequiredService<IPayloadSerializer>();
                 var message =
                     await postDbContext.AssertSingleConsumerMessage<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage);
                 message.AvailableAfter.Should().Be(delay);
                 message.Attempts.Should().Be(0);
@@ -50,7 +52,7 @@ public class ProducerServiceDbTests : DbTestsBase
                 message.Id.Should().Be("fake-id-1");
                 message.ConsumerType = nameof(SingleConsumer);
                 message.PayloadType = nameof(SingleConsumerMessage);
-                message.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage));
+                message.Payload.Should().Be(serializer.Serialize(consumerMessage));
                 message.TraceId.Should().Be(activity?.TraceId.ToString());
                 message.SpanId.Should().Be(activity?.SpanId.ToString());
             }
@@ -75,6 +77,7 @@ public class ProducerServiceDbTests : DbTestsBase
             // Given
             var serviceProvider = await Setup(dbContainer);
             var producer = serviceProvider.GetRequiredService<IProducerService>();
+            var serializer = serviceProvider.GetRequiredService<IPayloadSerializer>();
 
             var delay = 10;
             var consumerMessage1 = new SingleConsumerMessage
@@ -105,6 +108,7 @@ public class ProducerServiceDbTests : DbTestsBase
 
                 var message1 =
                     await postDbContext.AssertSingleConsumerMessageById<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage1, "fake-id-1");
                 message1.AvailableAfter.Should().Be(delay);
                 message1.Attempts.Should().Be(0);
@@ -112,12 +116,13 @@ public class ProducerServiceDbTests : DbTestsBase
                 message1.Id.Should().Be("fake-id-1");
                 message1.ConsumerType = nameof(SingleConsumer);
                 message1.PayloadType = nameof(SingleConsumerMessage);
-                message1.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage1));
+                message1.Payload.Should().Be(serializer.Serialize(consumerMessage1));
                 message1.TraceId.Should().Be(activity?.TraceId.ToString());
                 message1.SpanId.Should().Be(activity?.SpanId.ToString());
 
                 var message2 =
                     await postDbContext.AssertSingleConsumerMessageById<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage2, "fake-id-3");
                 message2.AvailableAfter.Should().Be(delay);
                 message2.Attempts.Should().Be(0);
@@ -125,7 +130,7 @@ public class ProducerServiceDbTests : DbTestsBase
                 message2.Id.Should().Be("fake-id-3");
                 message2.ConsumerType = nameof(SingleConsumer);
                 message2.PayloadType = nameof(SingleConsumerMessage);
-                message2.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage2));
+                message2.Payload.Should().Be(serializer.Serialize(consumerMessage2));
                 message2.TraceId.Should().Be(activity?.TraceId.ToString());
                 message2.SpanId.Should().Be(activity?.SpanId.ToString());
             }
@@ -148,6 +153,7 @@ public class ProducerServiceDbTests : DbTestsBase
             var scope = serviceProvider.CreateScope();
             var producer = scope.ServiceProvider.GetRequiredService<IProducerService>();
             var dbContext = scope.ServiceProvider.GetRequiredService<TestDbContext>();
+            var serializer = serviceProvider.GetRequiredService<IPayloadSerializer>();
 
             var delay = 10;
             var consumerMessage1 = new SingleConsumerMessage
@@ -179,6 +185,7 @@ public class ProducerServiceDbTests : DbTestsBase
 
                 var message1 =
                     await postDbContext.AssertSingleConsumerMessageById<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage1, "fake-id-1");
                 message1.AvailableAfter.Should().Be(delay);
                 message1.Attempts.Should().Be(0);
@@ -186,11 +193,12 @@ public class ProducerServiceDbTests : DbTestsBase
                 message1.Id.Should().Be("fake-id-1");
                 message1.ConsumerType = nameof(SingleConsumer);
                 message1.PayloadType = nameof(SingleConsumerMessage);
-                message1.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage1));
+                message1.Payload.Should().Be(serializer.Serialize(consumerMessage1));
                 message1.TraceId.Should().Be(activity?.TraceId.ToString());
                 message1.SpanId.Should().Be(activity?.SpanId.ToString());
                 var message2 =
                     await postDbContext.AssertSingleConsumerMessageById<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage2, "fake-id-3");
                 message2.AvailableAfter.Should().Be(delay);
                 message2.Attempts.Should().Be(0);
@@ -198,7 +206,7 @@ public class ProducerServiceDbTests : DbTestsBase
                 message2.Id.Should().Be("fake-id-3");
                 message2.ConsumerType = nameof(SingleConsumer);
                 message2.PayloadType = nameof(SingleConsumerMessage);
-                message2.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage2));
+                message2.Payload.Should().Be(serializer.Serialize(consumerMessage2));
                 message2.TraceId.Should().Be(activity?.TraceId.ToString());
                 message2.SpanId.Should().Be(activity?.SpanId.ToString());
             }
@@ -223,6 +231,7 @@ public class ProducerServiceDbTests : DbTestsBase
             // Given
             var serviceProvider = await Setup(dbContainer);
             var producer = serviceProvider.GetRequiredService<IProducerService>();
+            var serializer = serviceProvider.GetRequiredService<IPayloadSerializer>();
 
             var delay = 10;
             var insertId = "test-insert_id";
@@ -247,13 +256,14 @@ public class ProducerServiceDbTests : DbTestsBase
                 var postDbContext = serviceProvider.GetRequiredService<TestDbContext>();
                 var message =
                     await postDbContext.AssertSingleConsumerMessage<SingleConsumer, SingleConsumerMessage>(
+                        serviceProvider,
                         consumerMessage);
                 message.AvailableAfter.Should().Be(delay);
                 message.Attempts.Should().Be(0);
                 message.Id.Should().Be("fake-id-0");
                 message.ConsumerType = nameof(SingleConsumer);
                 message.PayloadType = nameof(SingleConsumerMessage);
-                message.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage));
+                message.Payload.Should().Be(serializer.Serialize(consumerMessage));
                 message.InsertId.Should().Be(insertId);
                 message.TraceId.Should().Be(activity?.TraceId.ToString());
                 message.SpanId.Should().Be(activity?.SpanId.ToString());

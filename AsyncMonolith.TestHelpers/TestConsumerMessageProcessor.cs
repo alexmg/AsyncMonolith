@@ -1,5 +1,5 @@
-﻿using System.Text.Json;
-using AsyncMonolith.Consumers;
+﻿using AsyncMonolith.Consumers;
+using AsyncMonolith.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -116,7 +116,7 @@ public static class TestConsumerMessageProcessor
         IServiceScope scope,
         TPayload payload,
         CancellationToken cancellationToken = default)
-        where TConsumer : BaseConsumer<TPayload>
+        where TConsumer : IConsumer<TPayload>
         where TPayload : IConsumerPayload
     {
         // Resolve the consumer
@@ -131,6 +131,8 @@ public static class TestConsumerMessageProcessor
         // Execute the consumer
         var consumerRegistry = scope.ServiceProvider.GetRequiredService<ConsumerRegistry>();
         var consumerInvoker = consumerRegistry.ResolveConsumerInvoker(consumerType);
+        var serializer = scope.ServiceProvider.GetRequiredService<IPayloadSerializer>();
+
         await consumerInvoker.InvokeConsumer(
             consumer,
             new ConsumerMessage
@@ -141,7 +143,7 @@ public static class TestConsumerMessageProcessor
                 CreatedAt = 0,
                 Id = string.Empty,
                 InsertId = string.Empty,
-                Payload = JsonSerializer.Serialize(payload),
+                Payload = serializer.Serialize(payload),
                 PayloadType = typeof(TPayload).Name,
                 TraceId = null,
                 SpanId = null

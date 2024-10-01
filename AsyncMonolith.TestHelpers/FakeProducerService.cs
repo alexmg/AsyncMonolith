@@ -1,7 +1,7 @@
-﻿using System.Text.Json;
-using AsyncMonolith.Consumers;
+﻿using AsyncMonolith.Consumers;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 
 namespace AsyncMonolith.TestHelpers;
@@ -13,6 +13,7 @@ public class FakeProducerService : IProducerService
 {
     private readonly ConsumerRegistry _consumerRegistry;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -21,12 +22,17 @@ public class FakeProducerService : IProducerService
     /// <param name="timeProvider">The time provider.</param>
     /// <param name="consumerRegistry">The consumer registry.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public FakeProducerService(TimeProvider timeProvider, ConsumerRegistry consumerRegistry,
-        IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public FakeProducerService(
+        TimeProvider timeProvider,
+        ConsumerRegistry consumerRegistry,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _consumerRegistry = consumerRegistry ?? throw new ArgumentNullException(nameof(consumerRegistry));
         _idGenerator = idGenerator ?? throw new ArgumentNullException(nameof(idGenerator));
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -49,7 +55,7 @@ public class FakeProducerService : IProducerService
     {
         var currentTime = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         availableAfter ??= currentTime;
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         insertId ??= _idGenerator.GenerateId();
         var payloadType = typeof(TK).Name;
 
@@ -92,7 +98,7 @@ public class FakeProducerService : IProducerService
         foreach (var message in messages)
         {
             var insertId = _idGenerator.GenerateId();
-            var payload = JsonSerializer.Serialize(message);
+            var payload = _payloadSerializer.Serialize(message);
 
             foreach (var consumerId in consumers)
             {

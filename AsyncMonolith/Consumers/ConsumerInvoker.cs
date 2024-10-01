@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text.Json;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 
 namespace AsyncMonolith.Consumers;
@@ -8,12 +8,14 @@ namespace AsyncMonolith.Consumers;
 internal class ConsumerInvoker
 {
     private readonly ConsumerRegistry _consumerRegistry;
-    private readonly Func<ConsumerRegistry, ConsumerMessage, object> _contextFunction;
+    private readonly IPayloadSerializer _serializer;
+    private readonly Func<ConsumerInvoker, ConsumerRegistry, ConsumerMessage, object> _contextFunction;
     private readonly Func<object, object, CancellationToken, Task> _consumerFunction;
 
-    internal ConsumerInvoker(ConsumerRegistry consumerRegistry, Type consumerType)
+    internal ConsumerInvoker(ConsumerRegistry consumerRegistry, Type consumerType, IPayloadSerializer serializer)
     {
         _consumerRegistry = consumerRegistry;
+        _serializer = serializer;
         var payloadType = consumerType.GetPayloadType();
 
         _contextFunction = BuildContextFunction(payloadType);
@@ -22,7 +24,7 @@ internal class ConsumerInvoker
 
     internal async Task InvokeConsumer(object consumer, ConsumerMessage message, CancellationToken cancellationToken)
     {
-        var context = _contextFunction(_consumerRegistry, message);
+        var context = _contextFunction(this, _consumerRegistry, message);
         await _consumerFunction(consumer, context, cancellationToken);
     }
 
@@ -49,37 +51,36 @@ internal class ConsumerInvoker
             .Compile();
     }
 
-    private static Func<ConsumerRegistry, ConsumerMessage, object> BuildContextFunction(Type payloadType)
+    private static Func<ConsumerInvoker, ConsumerRegistry, ConsumerMessage, object> BuildContextFunction(Type payloadType)
     {
         var contextMethod = typeof(ConsumerInvoker).GetMethod(
             nameof(BuildConsumeContext),
-            BindingFlags.Static | BindingFlags.NonPublic);
+            BindingFlags.Instance | BindingFlags.NonPublic);
 
         var genericContextMethod = contextMethod!.MakeGenericMethod(payloadType);
 
+        var invokerParameter = Expression.Parameter(typeof(ConsumerInvoker), "invoker");
         var registryParameter = Expression.Parameter(typeof(ConsumerRegistry), "registry");
         var messageParameter = Expression.Parameter(typeof(ConsumerMessage), "message");
 
         var methodCall = Expression.Call(
-            null, // Static method, so no instance is needed
+            invokerParameter,
             genericContextMethod,
             registryParameter,
             messageParameter
         );
 
-        return Expression.Lambda<Func<ConsumerRegistry, ConsumerMessage, object>>(
-                methodCall, registryParameter, messageParameter)
+        return Expression.Lambda<Func<ConsumerInvoker, ConsumerRegistry, ConsumerMessage, object>>(
+                methodCall, invokerParameter, registryParameter, messageParameter)
             .Compile();
     }
 
-    private static ConsumeContext<T> BuildConsumeContext<T>(
+    private ConsumeContext<T> BuildConsumeContext<T>(
         ConsumerRegistry consumerRegistry,
         ConsumerMessage message)
         where T : IConsumerPayload
     {
-        var payload = JsonSerializer.Deserialize<T>(message.Payload) ?? throw new Exception(
-            $"Consumer: '{message.ConsumerType}' failed to deserialize payload: '{message.PayloadType}'");
-
+        var payload = _serializer.Deserialize<T>(message.Payload);
         var messageContext = new MessageContext(
             message.Attempts,
             consumerRegistry.ResolveConsumerMaxAttempts(message),

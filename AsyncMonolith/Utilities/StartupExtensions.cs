@@ -1,5 +1,6 @@
 ﻿using AsyncMonolith.Consumers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -99,6 +100,7 @@ public static class StartupExtensions
         services.InternalConfigureAsyncMonolithSettings(settings);
         services.InternalRegisterAsyncMonolithConsumers(settings);
         services.AddSingleton<IAsyncMonolithIdGenerator>(new AsyncMonolithIdGenerator());
+        services.AddSingleton<IPayloadSerializer>(new DefaultPayloadSerializer());
         services.AddScoped<IScheduleService, ScheduleService<T>>();
 
         if (settings.ConsumerMessageProcessorCount > 1)
@@ -190,7 +192,13 @@ public static class StartupExtensions
             }
         }
 
-        services.AddSingleton(new ConsumerRegistry(consumerServiceDictionary, payloadConsumerDictionary,
-            consumerTimeoutDictionary, consumerAttemptsDictionary, settings));
+        services.AddSingleton(serviceProvider =>
+            new ConsumerRegistry(
+                consumerServiceDictionary,
+                payloadConsumerDictionary,
+                consumerTimeoutDictionary,
+                consumerAttemptsDictionary,
+                settings,
+                serviceProvider.GetRequiredService<IPayloadSerializer>()));
     }
 }

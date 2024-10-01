@@ -1,5 +1,5 @@
-using System.Text.Json;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.TestHelpers;
 using AsyncMonolith.Tests.Infra;
 using FluentAssertions;
@@ -24,6 +24,7 @@ public class ScheduledMessageServiceTests : DbTestsBase
             };
 
             var scheduledMessageService = serviceProvider.GetRequiredService<IScheduleService>();
+            var serializer = serviceProvider.GetRequiredService<IPayloadSerializer>();
             var dbContext = serviceProvider.GetRequiredService<TestDbContext>();
             var tag = "test-tag";
 
@@ -35,12 +36,12 @@ public class ScheduledMessageServiceTests : DbTestsBase
             using var scope = serviceProvider.CreateScope();
             {
                 var postDbContext = serviceProvider.GetRequiredService<TestDbContext>();
-                var message = await postDbContext.AssertSingleScheduledMessage(consumerMessage);
+                var message = await postDbContext.AssertSingleScheduledMessage(serviceProvider, consumerMessage);
                 message.AvailableAfter.Should().Be(FakeTime.GetUtcNow().ToUnixTimeSeconds() + 1);
                 message.Id.Should().Be("fake-id-0");
                 message.Tag.Should().BeEquivalentTo(tag);
                 message.PayloadType = nameof(SingleConsumerMessage);
-                message.Payload.Should().Be(JsonSerializer.Serialize(consumerMessage));
+                message.Payload.Should().Be(serializer.Serialize(consumerMessage));
             }
         }
         finally

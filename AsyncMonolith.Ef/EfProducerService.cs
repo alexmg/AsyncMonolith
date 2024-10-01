@@ -1,8 +1,8 @@
 ﻿using System.Diagnostics;
-using System.Text.Json;
 using AsyncMonolith.Consumers;
 using AsyncMonolith.Producers;
 using AsyncMonolith.Scheduling;
+using AsyncMonolith.Serialization;
 using AsyncMonolith.Utilities;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +17,7 @@ public sealed class EfProducerService<T> : IProducerService where T : DbContext
     private readonly ConsumerRegistry _consumerRegistry;
     private readonly T _dbContext;
     private readonly IAsyncMonolithIdGenerator _idGenerator;
+    private readonly IPayloadSerializer _payloadSerializer;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -26,13 +27,19 @@ public sealed class EfProducerService<T> : IProducerService where T : DbContext
     /// <param name="consumerRegistry">The consumer registry.</param>
     /// <param name="dbContext">The DbContext.</param>
     /// <param name="idGenerator">The ID generator.</param>
-    public EfProducerService(TimeProvider timeProvider, ConsumerRegistry consumerRegistry, T dbContext,
-        IAsyncMonolithIdGenerator idGenerator)
+    /// <param name="payloadSerializer">The payload serializer.</param>
+    public EfProducerService(
+        TimeProvider timeProvider,
+        ConsumerRegistry consumerRegistry,
+        T dbContext,
+        IAsyncMonolithIdGenerator idGenerator,
+        IPayloadSerializer payloadSerializer)
     {
         _timeProvider = timeProvider;
         _consumerRegistry = consumerRegistry;
         _dbContext = dbContext;
         _idGenerator = idGenerator;
+        _payloadSerializer = payloadSerializer;
     }
 
     /// <summary>
@@ -50,7 +57,7 @@ public sealed class EfProducerService<T> : IProducerService where T : DbContext
     {
         var currentTime = _timeProvider.GetUtcNow().ToUnixTimeSeconds();
         availableAfter ??= currentTime;
-        var payload = JsonSerializer.Serialize(message);
+        var payload = _payloadSerializer.Serialize(message);
         insertId ??= _idGenerator.GenerateId();
         var payloadType = typeof(TK).Name;
         var set = _dbContext.Set<ConsumerMessage>();
@@ -100,7 +107,7 @@ public sealed class EfProducerService<T> : IProducerService where T : DbContext
         foreach (var message in messages)
         {
             var insertId = _idGenerator.GenerateId();
-            var payload = JsonSerializer.Serialize(message);
+            var payload = _payloadSerializer.Serialize(message);
 
             foreach (var consumerId in consumers)
             {
