@@ -70,7 +70,7 @@ public class AsyncMonolithSettings
         ScheduledMessageProcessorCount = 1,
         ProcessorBatchSize = 5
     };
-    
+
     /// <summary>
     /// Register consumers and payloads from assembly containing given type.
     /// </summary>
@@ -93,7 +93,7 @@ public class AsyncMonolithSettings
     /// <param name="assembly">Assembly to scan</param>
     /// <returns>The current instance to continue configuration.</returns>
     public AsyncMonolithSettings RegisterTypesFromAssembly(Assembly assembly)
-        => RegisterTypesFromAssemblies([assembly]);
+        => RegisterTypesFromAssemblies(assembly);
 
     /// <summary>
     /// Register consumers and payloads from assemblies.
