@@ -4,6 +4,7 @@
 ///     Base class for consumers.
 /// </summary>
 /// <typeparam name="TPayload">The type of the consumer payload.</typeparam>
+[Obsolete("Consumers should directly implement the IConsumer<TPayload> interface.")]
 public abstract class BaseConsumer<TPayload> : IConsumer<TPayload> where TPayload : IConsumerPayload
 {
     /// <inheritdoc />
